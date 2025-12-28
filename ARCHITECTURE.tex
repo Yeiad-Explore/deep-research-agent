@@ -1,0 +1,1023 @@
+\documentclass[11pt,a4paper]{article}
+
+% Packages
+\usepackage[utf8]{inputenc}
+\usepackage[margin=1in]{geometry}
+\usepackage{graphicx}
+\usepackage{tikz}
+\usetikzlibrary{shapes.geometric, arrows, positioning, fit, backgrounds}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{float}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{enumitem}
+\usepackage{tabularx}
+\usepackage{booktabs}
+
+% TikZ styles
+\tikzstyle{process} = [rectangle, rounded corners, minimum width=3cm, minimum height=1cm, text centered, draw=black, fill=blue!30]
+\tikzstyle{data} = [trapezium, trapezium left angle=70, trapezium right angle=110, minimum width=3cm, minimum height=1cm, text centered, draw=black, fill=orange!30]
+\tikzstyle{decision} = [diamond, minimum width=3cm, minimum height=1cm, text centered, draw=black, fill=green!30]
+\tikzstyle{io} = [parallelogram, minimum width=3cm, minimum height=1cm, text centered, draw=black, fill=yellow!30]
+\tikzstyle{arrow} = [thick,->,>=stealth]
+\tikzstyle{cloud} = [ellipse, minimum width=3cm, minimum height=1.5cm, text centered, draw=black, fill=red!20]
+
+% Code listing settings
+\lstdefinestyle{pythonstyle}{
+    language=Python,
+    basicstyle=\ttfamily\small,
+    keywordstyle=\color{blue}\bfseries,
+    stringstyle=\color{red},
+    commentstyle=\color{green!50!black}\itshape,
+    numbers=left,
+    numberstyle=\tiny\color{gray},
+    stepnumber=1,
+    numbersep=8pt,
+    showstringspaces=false,
+    breaklines=true,
+    frame=single,
+    backgroundcolor=\color{gray!10}
+}
+
+\lstset{style=pythonstyle}
+
+% Document metadata
+\title{\textbf{Deep Research Agent}\\System Architecture Documentation}
+\author{AI-Powered Multi-Source Research Platform}
+\date{Version 1.0.0 --- December 2025}
+
+\begin{document}
+
+\maketitle
+\tableofcontents
+\newpage
+
+% ============================================================================
+\section{Executive Summary}
+% ============================================================================
+
+The Deep Research Agent is a sophisticated AI-powered research platform that combines web search, Reddit community insights, and advanced language models to produce comprehensive research reports. The system leverages LangGraph for orchestration, Tavily AI for intelligent web search, YARS for Reddit data extraction, and Azure OpenAI GPT-5.1 for synthesis and analysis.
+
+\subsection{Key Capabilities}
+
+\begin{itemize}
+    \item Multi-source data aggregation (web + Reddit)
+    \item Real-time streaming via WebSocket
+    \item Iterative research refinement (up to 5 iterations)
+    \item Cross-source validation and fact verification
+    \item Community consensus analysis
+    \item Expert opinion extraction
+    \item Comprehensive report generation with citations
+\end{itemize}
+
+\subsection{Technology Stack}
+
+\begin{table}[H]
+\centering
+\begin{tabularx}{\textwidth}{lX}
+\toprule
+\textbf{Component} & \textbf{Technology} \\
+\midrule
+Backend Framework & FastAPI (Python 3.9+) \\
+AI Orchestration & LangGraph StateGraph \\
+Web Search & Tavily AI Search API \\
+Language Model & Azure OpenAI GPT-5.1 \\
+Reddit Scraper & YARS (Public JSON API) \\
+Web Scraper & aiohttp + BeautifulSoup4 \\
+Frontend & Vanilla JavaScript + WebSocket \\
+Data Validation & Pydantic + TypedDict \\
+Retry Logic & Tenacity \\
+\bottomrule
+\end{tabularx}
+\caption{Technology Stack Overview}
+\end{table}
+
+% ============================================================================
+\section{System Architecture}
+% ============================================================================
+
+\subsection{High-Level Architecture}
+
+The system follows a three-tier architecture pattern:
+
+\begin{enumerate}
+    \item \textbf{Presentation Layer}: HTML/CSS/JS frontend with WebSocket communication
+    \item \textbf{Application Layer}: FastAPI backend with LangGraph orchestration
+    \item \textbf{Integration Layer}: External API clients (Tavily, Azure OpenAI, Reddit)
+\end{enumerate}
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[node distance=2cm]
+
+% Frontend Layer
+\node (frontend) [process, minimum width=8cm] {Frontend (HTML/JS/CSS)};
+\node (websocket) [io, below of=frontend, yshift=-0.5cm] {WebSocket Interface};
+
+% Backend Layer
+\node (fastapi) [process, below of=websocket, yshift=-0.5cm, minimum width=8cm] {FastAPI Application Server};
+\node (langgraph) [process, below of=fastapi, yshift=-0.5cm, minimum width=8cm] {LangGraph State Machine};
+
+% Tool Layer
+\node (tools) [process, below of=langgraph, yshift=-0.5cm, minimum width=8cm] {Research Tools Layer};
+
+% External APIs
+\node (tavily) [cloud, below of=tools, yshift=-1.5cm, xshift=-4cm] {Tavily AI};
+\node (azure) [cloud, below of=tools, yshift=-1.5cm] {Azure OpenAI};
+\node (reddit) [cloud, below of=tools, yshift=-1.5cm, xshift=4cm] {Reddit API};
+
+% Arrows
+\draw [arrow] (frontend) -- (websocket);
+\draw [arrow] (websocket) -- (fastapi);
+\draw [arrow] (fastapi) -- (langgraph);
+\draw [arrow] (langgraph) -- (tools);
+\draw [arrow] (tools) -- (tavily);
+\draw [arrow] (tools) -- (azure);
+\draw [arrow] (tools) -- (reddit);
+
+\end{tikzpicture}
+\caption{High-Level System Architecture}
+\end{figure}
+
+\subsection{Component Architecture}
+
+\subsubsection{Backend Components}
+
+\begin{table}[H]
+\centering
+\begin{tabularx}{\textwidth}{lX}
+\toprule
+\textbf{Module} & \textbf{Responsibility} \\
+\midrule
+\texttt{main.py} & FastAPI application initialization, CORS, static file serving \\
+\texttt{config.py} & Pydantic Settings for environment configuration \\
+\texttt{schemas.py} & TypedDict for state management, Pydantic models for API \\
+\texttt{graph\_builder.py} & LangGraph StateGraph construction and compilation \\
+\texttt{nodes.py} & 9 research workflow nodes implementation \\
+\texttt{tools.py} & Research tool methods combining all clients \\
+\texttt{tavily\_client.py} & Tavily AI Search integration \\
+\texttt{azure\_client.py} & Azure OpenAI GPT-5.1 client \\
+\texttt{yars\_client.py} & Reddit public JSON API scraper \\
+\texttt{web\_scraper.py} & Generic web content scraper \\
+\texttt{routes.py} & REST API and WebSocket endpoints \\
+\bottomrule
+\end{tabularx}
+\caption{Backend Component Responsibilities}
+\end{table}
+
+% ============================================================================
+\section{LangGraph Workflow Architecture}
+% ============================================================================
+
+\subsection{State Machine Design}
+
+The research workflow is implemented as a LangGraph StateGraph with 9 nodes and conditional edges. The state is maintained in a \texttt{ResearchState} TypedDict that flows through the graph.
+
+\subsection{State Schema}
+
+The \texttt{ResearchState} TypedDict contains:
+
+\begin{lstlisting}[language=Python, caption=ResearchState Structure]
+ResearchState = TypedDict('ResearchState', {
+    # Query and Configuration
+    'query': str,
+    'research_config': dict,
+    'max_iterations': int,
+    'iteration': int,
+
+    # Search Results
+    'web_results': List[Dict[str, Any]],
+    'reddit_posts': List[Dict[str, Any]],
+    'reddit_comments': List[Dict[str, Any]],
+    'search_keywords': List[str],
+    'relevant_subreddits': List[str],
+
+    # Content
+    'scraped_web_content': List[Dict[str, Any]],
+    'reddit_threads': List[Dict[str, Any]],
+
+    # Analysis
+    'web_summaries': List[Dict[str, Any]],
+    'reddit_summaries': List[Dict[str, Any]],
+    'expert_opinions': List[Dict[str, Any]],
+
+    # Synthesis
+    'community_consensus': Dict[str, Any],
+    'cross_reference': Dict[str, Any]],
+    'corroborated_facts': List[str],
+    'contradictions': List[str],
+    'final_synthesis': str,
+
+    # Quality Control
+    'sources': List[Dict[str, str]],
+    'confidence_scores': Dict[str, float],
+    'identified_gaps': List[str],
+    'refinement_queries': List[str],
+    'research_complete': bool,
+    'errors': List[str]
+})
+\end{lstlisting}
+
+\subsection{Workflow Graph}
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[node distance=1.8cm and 2cm]
+
+% Nodes
+\node (start) [io] {START};
+\node (planner) [process, below of=start] {Query Planner};
+\node (searcher) [process, below of=planner] {Multi-Source\\Searcher};
+\node (scraper) [process, below of=searcher] {Content\\Scraper};
+\node (analyzer) [process, below of=scraper] {Content\\Analyzer};
+\node (consensus) [process, below of=analyzer] {Consensus\\Builder};
+\node (crossref) [process, below of=consensus] {Cross-Reference\\Validator};
+\node (synthesis) [process, below of=crossref] {Synthesis\\Generator};
+\node (quality) [decision, below of=synthesis, yshift=-0.5cm] {Quality\\Checker};
+\node (gap) [process, right of=quality, xshift=3cm] {Gap\\Filler};
+\node (end) [io, below of=quality, yshift=-1cm] {END};
+
+% Arrows
+\draw [arrow] (start) -- (planner);
+\draw [arrow] (planner) -- (searcher);
+\draw [arrow] (searcher) -- (scraper);
+\draw [arrow] (scraper) -- (analyzer);
+\draw [arrow] (analyzer) -- (consensus);
+\draw [arrow] (consensus) -- (crossref);
+\draw [arrow] (crossref) -- (synthesis);
+\draw [arrow] (synthesis) -- (quality);
+\draw [arrow] (quality) -- node[anchor=west] {complete} (end);
+\draw [arrow] (quality) -- node[anchor=south] {continue} (gap);
+\draw [arrow] (gap) |- (searcher);
+
+\end{tikzpicture}
+\caption{LangGraph Workflow State Machine}
+\end{figure}
+
+\subsection{Node Descriptions}
+
+\subsubsection{1. Query Planner}
+
+\textbf{Purpose}: Analyzes the research query and creates a strategic research plan.
+
+\textbf{Inputs}:
+\begin{itemize}
+    \item User query
+    \item Research configuration
+\end{itemize}
+
+\textbf{Process}:
+\begin{enumerate}
+    \item Uses Azure OpenAI GPT-5.1 to analyze query
+    \item Generates search keywords
+    \item Identifies relevant subreddits
+    \item Creates sub-questions for comprehensive coverage
+    \item Determines research approach
+\end{enumerate}
+
+\textbf{Outputs}:
+\begin{itemize}
+    \item \texttt{search\_keywords}: List of optimized search terms
+    \item \texttt{relevant\_subreddits}: Target subreddit names
+    \item Research strategy metadata
+\end{itemize}
+
+\subsubsection{2. Multi-Source Searcher}
+
+\textbf{Purpose}: Executes parallel searches across web and Reddit.
+
+\textbf{Inputs}:
+\begin{itemize}
+    \item Search keywords
+    \item Subreddit list
+    \item Configuration parameters
+\end{itemize}
+
+\textbf{Process}:
+\begin{enumerate}
+    \item \textbf{Web Search}: Tavily AI advanced search (max 20 results)
+    \item \textbf{Reddit Posts}: YARS post search across subreddits
+    \item \textbf{Reddit Comments}: YARS comment search for in-depth insights
+    \item \textbf{Subreddit Discovery}: Identifies additional relevant communities
+    \item All searches executed asynchronously in parallel
+\end{enumerate}
+
+\textbf{Outputs}:
+\begin{itemize}
+    \item \texttt{web\_results}: Tavily search results with metadata
+    \item \texttt{reddit\_posts}: Reddit post data
+    \item \texttt{reddit\_comments}: High-value comment data
+    \item \texttt{relevant\_subreddits}: Expanded subreddit list
+\end{itemize}
+
+\subsubsection{3. Content Scraper}
+
+\textbf{Purpose}: Extracts full content from URLs and Reddit threads.
+
+\textbf{Inputs}:
+\begin{itemize}
+    \item Web result URLs
+    \item Reddit post URLs
+\end{itemize}
+
+\textbf{Process}:
+\begin{enumerate}
+    \item \textbf{Web Scraping}: aiohttp + BeautifulSoup4
+    \begin{itemize}
+        \item Fetches HTML content
+        \item Extracts main text content
+        \item Removes scripts, styles, navigation
+        \item Respects timeout and size limits
+    \end{itemize}
+    \item \textbf{Reddit Thread Analysis}: YARS deep thread extraction
+    \begin{itemize}
+        \item Fetches post with top comments
+        \item Extracts comment threads
+        \item Captures upvotes and metadata
+    \end{itemize}
+    \item Implements retry logic with exponential backoff
+\end{enumerate}
+
+\textbf{Outputs}:
+\begin{itemize}
+    \item \texttt{scraped\_web\_content}: Full text from web pages
+    \item \texttt{reddit\_threads}: Complete thread data with comments
+\end{itemize}
+
+\subsubsection{4. Content Analyzer}
+
+\textbf{Purpose}: Summarizes and extracts insights from all content.
+
+\textbf{Inputs}:
+\begin{itemize}
+    \item Scraped web content
+    \item Reddit thread data
+\end{itemize}
+
+\textbf{Process}:
+\begin{enumerate}
+    \item \textbf{Summarization}: Azure OpenAI generates concise summaries
+    \item \textbf{Entity Extraction}: Identifies people, organizations, locations, dates
+    \item \textbf{Fact Extraction}: Key facts and claims
+    \item \textbf{Sentiment Analysis}: Determines tone and sentiment
+    \item All analysis tasks executed in parallel
+\end{enumerate}
+
+\textbf{Outputs}:
+\begin{itemize}
+    \item \texttt{web\_summaries}: Structured summaries with metadata
+    \item \texttt{reddit\_summaries}: Thread summaries with key points
+    \item Extracted entities and facts embedded in summaries
+\end{itemize}
+
+\subsubsection{5. Consensus Builder}
+
+\textbf{Purpose}: Analyzes Reddit discussions to identify community consensus.
+
+\textbf{Inputs}:
+\begin{itemize}
+    \item Reddit summaries
+\end{itemize}
+
+\textbf{Process}:
+\begin{enumerate}
+    \item Combines all Reddit content
+    \item Uses Azure OpenAI to analyze:
+    \begin{itemize}
+        \item Overall sentiment (positive/negative/neutral/mixed)
+        \item Agreement level (high/medium/low)
+        \item Common themes
+        \item Majority opinion
+        \item Minority/contrarian opinions
+    \end{itemize}
+    \item Returns structured JSON analysis
+\end{enumerate}
+
+\textbf{Outputs}:
+\begin{itemize}
+    \item \texttt{community\_consensus}: Structured consensus data
+    \item Sentiment metrics
+    \item Theme identification
+\end{itemize}
+
+\subsubsection{6. Cross-Reference Validator}
+
+\textbf{Purpose}: Validates information across multiple sources.
+
+\textbf{Inputs}:
+\begin{itemize}
+    \item Web summaries
+    \item Reddit summaries
+\end{itemize}
+
+\textbf{Process}:
+\begin{enumerate}
+    \item Compares facts across sources
+    \item Identifies corroborated information (multiple sources agree)
+    \item Detects contradictions and conflicts
+    \item Highlights unique insights from single sources
+    \item Assigns confidence scores
+\end{enumerate}
+
+\textbf{Outputs}:
+\begin{itemize}
+    \item \texttt{corroborated\_facts}: Facts supported by multiple sources
+    \item \texttt{contradictions}: Conflicting information
+    \item \texttt{cross\_reference}: Complete validation analysis
+    \item Confidence assessments
+\end{itemize}
+
+\subsubsection{7. Synthesis Generator}
+
+\textbf{Purpose}: Creates comprehensive research report.
+
+\textbf{Inputs}:
+\begin{itemize}
+    \item All summaries
+    \item Community consensus
+    \item Cross-reference data
+    \item Source metadata
+\end{itemize}
+
+\textbf{Process}:
+\begin{enumerate}
+    \item Azure OpenAI GPT-5.1 synthesis (3000 max tokens)
+    \item Structured report format:
+    \begin{itemize}
+        \item Executive Summary
+        \item Factual Findings (web sources)
+        \item Community Perspectives (Reddit)
+        \item Expert Opinions
+        \item Contradictions and Debates
+        \item Confidence Assessment
+        \item Knowledge Gaps
+        \item Conclusion
+    \end{itemize}
+    \item Inline citations [Source N]
+    \item Balanced, objective analysis
+\end{enumerate}
+
+\textbf{Outputs}:
+\begin{itemize}
+    \item \texttt{final\_synthesis}: Comprehensive research report
+    \item \texttt{sources}: Organized source list with URLs
+\end{itemize}
+
+\subsubsection{8. Quality Checker}
+
+\textbf{Purpose}: Evaluates research completeness and decides on iteration.
+
+\textbf{Inputs}:
+\begin{itemize}
+    \item Current synthesis
+    \item Iteration count
+    \item Configuration (max\_iterations)
+\end{itemize}
+
+\textbf{Decision Logic}:
+
+\begin{lstlisting}[language=Python, caption=Quality Check Decision Function]
+def should_continue_research(state: ResearchState) -> str:
+    is_complete = state.get("research_complete", False)
+    iteration = state.get("iteration", 0)
+    max_iterations = state.get("max_iterations", 3)
+
+    if is_complete:
+        return "end"
+    elif iteration >= max_iterations:
+        return "end"
+    else:
+        return "continue"
+\end{lstlisting}
+
+\textbf{Routes}:
+\begin{itemize}
+    \item \texttt{"end"}: Terminates workflow
+    \item \texttt{"continue"}: Routes to Gap Filler
+\end{itemize}
+
+\subsubsection{9. Gap Filler}
+
+\textbf{Purpose}: Identifies knowledge gaps and generates refinement queries.
+
+\textbf{Inputs}:
+\begin{itemize}
+    \item Current synthesis
+    \item Sources consulted
+    \item Original query
+\end{itemize}
+
+\textbf{Process}:
+\begin{enumerate}
+    \item Analyzes current findings for gaps
+    \item Identifies missing information
+    \item Generates 3-5 targeted search queries
+    \item Increments iteration counter
+\end{enumerate}
+
+\textbf{Outputs}:
+\begin{itemize}
+    \item \texttt{identified\_gaps}: List of knowledge gaps
+    \item \texttt{refinement\_queries}: New targeted searches
+    \item \texttt{iteration}: Incremented counter
+\end{itemize}
+
+% ============================================================================
+\section{API Integration Architecture}
+% ============================================================================
+
+\subsection{Tavily AI Search Client}
+
+\textbf{Integration Pattern}: Synchronous SDK wrapped in async context
+
+\begin{lstlisting}[language=Python, caption=Tavily Client Implementation]
+class TavilySearchClient:
+    def __init__(self, api_key: str):
+        self.client = TavilyClient(api_key=api_key)
+
+    async def web_search(
+        self,
+        query: str,
+        num_results: int = 10,
+        search_depth: str = "advanced"
+    ) -> List[Dict[str, Any]]:
+        # Tavily is sync, wrapped for async compatibility
+        response = self.client.search(
+            query=query,
+            max_results=min(num_results, 20),
+            search_depth=search_depth
+        )
+        return self._format_results(response)
+\end{lstlisting}
+
+\textbf{Features}:
+\begin{itemize}
+    \item AI-optimized search specifically for LLMs
+    \item Advanced search depth for thorough results
+    \item Domain filtering (include/exclude)
+    \item Rich metadata (score, published date, domain)
+    \item Maximum 20 results in advanced mode
+\end{itemize}
+
+\subsection{Azure OpenAI Client}
+
+\textbf{Integration Pattern}: AsyncOpenAI with custom endpoint
+
+\begin{lstlisting}[language=Python, caption=Azure OpenAI Client]
+class AzureOpenAIClient:
+    def __init__(self, api_key: str, endpoint: str,
+                 deployment_name: str):
+        self.client = AsyncOpenAI(
+            base_url=endpoint,
+            api_key=api_key
+        )
+        self.deployment_name = deployment_name
+
+    async def chat_completion(
+        self,
+        messages: List[Dict[str, str]],
+        max_completion_tokens: int = 2000,
+        stream: bool = False
+    ) -> str:
+        response = await self.client.chat.completions.create(
+            model=self.deployment_name,
+            messages=messages,
+            max_completion_tokens=max_completion_tokens,
+            stream=stream
+        )
+        return response.choices[0].message.content
+\end{lstlisting}
+
+\textbf{GPT-5.1 Specifics}:
+\begin{itemize}
+    \item Uses \texttt{max\_completion\_tokens} (not \texttt{max\_tokens})
+    \item Only supports \texttt{temperature=1.0} (default)
+    \item Requires Azure-specific endpoint format
+    \item Supports async streaming
+\end{itemize}
+
+\subsection{YARS Reddit Client}
+
+\textbf{Integration Pattern}: Direct HTTP requests to public JSON API
+
+\begin{lstlisting}[language=Python, caption=YARS Client Implementation]
+class YARSRedditClient:
+    def __init__(self, user_agent: str):
+        self.headers = {"User-Agent": user_agent}
+        self.base_url = "https://www.reddit.com"
+        self.session = requests.Session()
+
+    def search_posts(
+        self,
+        query: str,
+        subreddits: Optional[List[str]] = None,
+        limit: int = 50,
+        time_filter: str = "month"
+    ) -> List[Dict[str, Any]]:
+        # Constructs Reddit JSON URL
+        url = f"{self.base_url}/search.json"
+        params = {
+            "q": query,
+            "limit": limit,
+            "t": time_filter
+        }
+        # 1 second delay for rate limiting
+        time.sleep(1)
+        return self._parse_response(response)
+\end{lstlisting}
+
+\textbf{Features}:
+\begin{itemize}
+    \item No API keys required
+    \item Uses public \texttt{.json} endpoints
+    \item Built-in rate limiting (1s delay)
+    \item Post and comment search
+    \item Thread analysis with comment trees
+    \item Subreddit discovery
+\end{itemize}
+
+\subsection{Web Scraper}
+
+\textbf{Integration Pattern}: aiohttp + BeautifulSoup4
+
+\begin{lstlisting}[language=Python, caption=Web Scraper]
+class WebScraper:
+    async def scrape_url(self, url: str) -> Dict[str, Any]:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(
+                url,
+                timeout=self.timeout
+            ) as response:
+                html = await response.text()
+                soup = BeautifulSoup(html, 'lxml')
+
+                # Remove unwanted elements
+                for tag in soup(['script', 'style', 'nav']):
+                    tag.decompose()
+
+                # Extract main content
+                content = soup.get_text(separator='\n', strip=True)
+
+                return {
+                    "url": url,
+                    "content": content[:self.max_content_length],
+                    "success": True
+                }
+\end{lstlisting}
+
+% ============================================================================
+\section{Data Flow Architecture}
+% ============================================================================
+
+\subsection{Request Processing Flow}
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[node distance=1.5cm]
+
+\node (user) [io] {User Input};
+\node (frontend) [process, below of=user] {Frontend UI};
+\node (websocket) [data, below of=frontend] {WebSocket\\Connection};
+\node (api) [process, below of=websocket] {FastAPI Handler};
+\node (graph) [process, below of=api] {LangGraph\\Execution};
+\node (nodes) [process, below of=graph] {Node Processing};
+\node (apis) [cloud, below of=nodes] {External APIs};
+\node (state) [data, right of=nodes, xshift=3cm] {State\\Updates};
+
+\draw [arrow] (user) -- (frontend);
+\draw [arrow] (frontend) -- (websocket);
+\draw [arrow] (websocket) -- (api);
+\draw [arrow] (api) -- (graph);
+\draw [arrow] (graph) -- (nodes);
+\draw [arrow] (nodes) -- (apis);
+\draw [arrow] (nodes) -- (state);
+\draw [arrow] (state) |- (websocket);
+
+\end{tikzpicture}
+\caption{Request Processing Data Flow}
+\end{figure}
+
+\subsection{State Management}
+
+State flows through the LangGraph using a functional paradigm:
+
+\begin{lstlisting}[language=Python, caption=State Flow Pattern]
+async def node_function(state: ResearchState) -> ResearchState:
+    # Read from state
+    query = state["query"]
+
+    # Perform operations
+    results = await perform_research(query)
+
+    # Update state (immutable pattern)
+    state["results"] = results
+    state["iteration"] = state.get("iteration", 0) + 1
+
+    # Return modified state
+    return state
+\end{lstlisting}
+
+\textbf{State Update Streaming}:
+
+Each node update is yielded via WebSocket:
+
+\begin{lstlisting}[language=Python, caption=WebSocket Streaming]
+async for state_update in graph.astream(initial_state):
+    # state_update = {"node_name": {...state}}
+    await websocket.send_json({
+        "type": "node_complete",
+        "node": node_name,
+        "data": state_update
+    })
+\end{lstlisting}
+
+% ============================================================================
+\section{Security Architecture}
+% ============================================================================
+
+\subsection{API Key Management}
+
+\begin{itemize}
+    \item Environment variables via \texttt{.env} file
+    \item Pydantic Settings for validation
+    \item Never logged or exposed in responses
+    \item CORS restricted to localhost by default
+\end{itemize}
+
+\subsection{Input Validation}
+
+\begin{lstlisting}[language=Python, caption=Pydantic Validation]
+class ResearchRequest(BaseModel):
+    query: str = Field(..., min_length=1, max_length=500)
+    config: Optional[Dict[str, Any]] = None
+
+    @validator('query')
+    def validate_query(cls, v):
+        if not v.strip():
+            raise ValueError('Query cannot be empty')
+        return v.strip()
+\end{lstlisting}
+
+\subsection{Rate Limiting}
+
+\begin{itemize}
+    \item Tavily: Monthly API limits (handled via error responses)
+    \item Azure OpenAI: Token-based rate limits
+    \item Reddit: 1-second delay between requests
+    \item Retry logic with exponential backoff (Tenacity)
+\end{itemize}
+
+% ============================================================================
+\section{Error Handling Architecture}
+% ============================================================================
+
+\subsection{Error Categories}
+
+\begin{table}[H]
+\centering
+\begin{tabularx}{\textwidth}{lXl}
+\toprule
+\textbf{Error Type} & \textbf{Handling Strategy} & \textbf{Recovery} \\
+\midrule
+API Timeout & Retry with backoff & 3 retries, exponential \\
+API Rate Limit & Wait and retry & Exponential backoff \\
+Invalid Response & Skip and continue & Log error, continue \\
+Network Error & Retry & 3 retries \\
+LLM Parse Error & Use defaults & Fallback values \\
+WebSocket Error & Reconnect & Client reconnection \\
+\bottomrule
+\end{tabularx}
+\caption{Error Handling Strategies}
+\end{table}
+
+\subsection{Retry Configuration}
+
+\begin{lstlisting}[language=Python, caption=Tenacity Retry Decorator]
+@retry(
+    stop=stop_after_attempt(3),
+    wait=wait_exponential(multiplier=1, min=2, max=10),
+    retry=retry_if_exception_type(
+        (aiohttp.ClientError, asyncio.TimeoutError)
+    )
+)
+async def fetch_with_retry(url: str):
+    # Implementation
+    pass
+\end{lstlisting}
+
+% ============================================================================
+\section{Performance Optimization}
+% ============================================================================
+
+\subsection{Asynchronous Processing}
+
+All I/O operations use \texttt{async/await}:
+
+\begin{itemize}
+    \item Parallel web and Reddit searches
+    \item Concurrent content scraping
+    \item Simultaneous summarization tasks
+    \item Non-blocking API calls
+\end{itemize}
+
+\subsection{Parallelization Strategy}
+
+\begin{lstlisting}[language=Python, caption=Parallel Execution Pattern]
+# Execute multiple searches in parallel
+async def multi_source_search():
+    web_task = tavily.web_search(query)
+    reddit_posts_task = yars.search_posts(query)
+    reddit_comments_task = yars.search_comments(query)
+
+    # Wait for all to complete
+    web_results, posts, comments = await asyncio.gather(
+        web_task,
+        reddit_posts_task,
+        reddit_comments_task
+    )
+\end{lstlisting}
+
+\subsection{Optimization Techniques}
+
+\begin{enumerate}
+    \item \textbf{Content Limits}: Maximum 10,000 characters per scraped page
+    \item \textbf{Timeout Settings}: 10s for web requests, 30s for LLM calls
+    \item \textbf{Result Limits}: Configurable max results (default 15 web, 50 Reddit)
+    \item \textbf{Streaming}: Real-time state updates reduce perceived latency
+    \item \textbf{Caching}: None currently (future enhancement)
+\end{enumerate}
+
+% ============================================================================
+\section{Deployment Architecture}
+% ============================================================================
+
+\subsection{Development Deployment}
+
+\textbf{Current Setup}: Single-server deployment
+
+\begin{itemize}
+    \item Uvicorn ASGI server with hot reload
+    \item Host: \texttt{127.0.0.1:8000} (localhost only)
+    \item Static file serving from FastAPI
+    \item No containerization
+    \item No reverse proxy
+    \item No database
+\end{itemize}
+
+\subsection{Production Considerations}
+
+For production deployment:
+
+\begin{enumerate}
+    \item \textbf{Web Server}: Nginx reverse proxy
+    \item \textbf{ASGI Server}: Gunicorn + Uvicorn workers
+    \item \textbf{Process Manager}: Systemd or Supervisor
+    \item \textbf{Database}: PostgreSQL for session persistence
+    \item \textbf{Caching}: Redis for API response caching
+    \item \textbf{Monitoring}: Prometheus + Grafana
+    \item \textbf{Logging}: ELK stack or similar
+    \item \textbf{SSL/TLS}: Let's Encrypt certificates
+\end{enumerate}
+
+% ============================================================================
+\section{Future Architecture Enhancements}
+% ============================================================================
+
+\subsection{Planned Improvements}
+
+\begin{enumerate}
+    \item \textbf{Database Integration}
+    \begin{itemize}
+        \item PostgreSQL for research session storage
+        \item Session history and retrieval
+        \item User preferences and saved searches
+    \end{itemize}
+
+    \item \textbf{Caching Layer}
+    \begin{itemize}
+        \item Redis for API response caching
+        \item Reduce redundant API calls
+        \item Improve response times
+    \end{itemize}
+
+    \item \textbf{Multi-LLM Support}
+    \begin{itemize}
+        \item Anthropic Claude integration
+        \item Google Gemini support
+        \item LLM provider abstraction layer
+    \end{itemize}
+
+    \item \textbf{Advanced Analytics}
+    \begin{itemize}
+        \item Research quality metrics
+        \item Source reliability scoring
+        \item Topic clustering
+    \end{itemize}
+
+    \item \textbf{Export Formats}
+    \begin{itemize}
+        \item PDF generation
+        \item Markdown export
+        \item Structured JSON
+        \item CSV data export
+    \end{itemize}
+
+    \item \textbf{Authentication \& Authorization}
+    \begin{itemize}
+        \item User accounts
+        \item API key management
+        \item Usage quotas
+        \item Team collaboration
+    \end{itemize}
+\end{enumerate}
+
+% ============================================================================
+\section{Appendix}
+% ============================================================================
+
+\subsection{API Endpoint Reference}
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabularx}{\textwidth}{llX}
+\toprule
+\textbf{Method} & \textbf{Endpoint} & \textbf{Description} \\
+\midrule
+POST & \texttt{/api/research} & Start new research session \\
+GET & \texttt{/api/research/\{id\}} & Retrieve research session \\
+POST & \texttt{/api/research/\{id\}/refine} & Refine existing research \\
+WebSocket & \texttt{/ws/research} & Real-time streaming \\
+GET & \texttt{/api/subreddits/discover} & Discover subreddits \\
+POST & \texttt{/api/reddit/analyze-thread} & Analyze Reddit thread \\
+GET & \texttt{/health} & Health check \\
+GET & \texttt{/} & Frontend UI \\
+\bottomrule
+\end{tabularx}
+\caption{API Endpoint Reference}
+\end{table}
+
+\subsection{Configuration Parameters}
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabularx}{\textwidth}{llX}
+\toprule
+\textbf{Parameter} & \textbf{Default} & \textbf{Description} \\
+\midrule
+\texttt{MAX\_ITERATIONS} & 5 & Maximum research iterations \\
+\texttt{DEFAULT\_SEARCH\_RESULTS} & 15 & Web search result count \\
+\texttt{DEFAULT\_REDDIT\_POSTS} & 50 & Reddit post limit \\
+\texttt{SCRAPE\_TIMEOUT} & 10 & Web scrape timeout (seconds) \\
+\texttt{MAX\_CONTENT\_LENGTH} & 10000 & Max scraped content chars \\
+\texttt{CORS\_ORIGINS} & localhost & Allowed CORS origins \\
+\bottomrule
+\end{tabularx}
+\caption{Configuration Parameters}
+\end{table}
+
+\subsection{Dependencies}
+
+\textbf{Core Dependencies}:
+\begin{itemize}
+    \item \texttt{fastapi} - Web framework
+    \item \texttt{uvicorn[standard]} - ASGI server
+    \item \texttt{langgraph} - Agent orchestration
+    \item \texttt{langchain} - LangGraph dependencies
+    \item \texttt{langchain-openai} - OpenAI integration
+    \item \texttt{openai} - Azure OpenAI SDK
+    \item \texttt{tavily-python} - Tavily AI Search
+    \item \texttt{pydantic} - Data validation
+    \item \texttt{pydantic-settings} - Settings management
+    \item \texttt{aiohttp} - Async HTTP client
+    \item \texttt{beautifulsoup4} - HTML parsing
+    \item \texttt{lxml} - XML/HTML parser
+    \item \texttt{tenacity} - Retry logic
+    \item \texttt{python-dotenv} - Environment variables
+    \item \texttt{requests} - HTTP library (YARS)
+    \item \texttt{websockets} - WebSocket support
+\end{itemize}
+
+% ============================================================================
+\section{Conclusion}
+% ============================================================================
+
+The Deep Research Agent architecture represents a modern, scalable approach to AI-powered research. By leveraging LangGraph for orchestration, Tavily for intelligent search, and Azure OpenAI for synthesis, the system provides comprehensive multi-source research capabilities.
+
+Key architectural strengths include:
+
+\begin{itemize}
+    \item Modular, maintainable component design
+    \item Async-first for optimal performance
+    \item Robust error handling and retry logic
+    \item Real-time streaming for user engagement
+    \item Extensible node-based workflow
+    \item Type-safe state management
+\end{itemize}
+
+The architecture is designed for future enhancement, with clear paths toward database integration, advanced caching, multi-LLM support, and production-grade deployment.
+
+\end{document}
