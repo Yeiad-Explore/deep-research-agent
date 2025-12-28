@@ -13,6 +13,7 @@ AI-powered deep research agent combining LangGraph orchestration, Tavily AI Sear
 - **Cross-Reference Validation**: Verifies facts across multiple sources
 - **Comprehensive Reports**: Generates detailed research syntheses with citations
 - **Interactive UI**: Modern, responsive interface with live updates
+- **Modern Frontend**: Next.js frontend with shadcn/ui, animations, and better UX
 
 ## 📋 Prerequisites
 
@@ -100,9 +101,26 @@ chmod +x start.sh
 python -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 ```
 
+### 5. Set Up Frontend (Optional - Modern Next.js Frontend)
+
+The project includes two frontend options:
+
+**Option A: Modern Next.js Frontend (Recommended)**
+```bash
+cd frontend-nextjs
+npm install
+npm run dev
+```
+
+The Next.js frontend will be available at: http://localhost:3000
+
+**Option B: Legacy HTML Frontend**
+
 The application will be available at:
-- Frontend: http://localhost:8000
+- Frontend: http://localhost:8000 (served by FastAPI)
 - API Docs: http://localhost:8000/docs
+
+**Note:** The backend CORS is configured to allow both `http://localhost:3000` (Next.js) and `http://localhost:8000` (legacy frontend).
 
 ## 📚 API Documentation
 
@@ -213,7 +231,7 @@ Deep analysis of a specific Reddit thread.
 
 ## 🔄 Research Workflow
 
-The research process follows a LangGraph state machine with 9 nodes:
+The research process follows a LangGraph state machine with 8 highly optimized nodes:
 
 1. **Query Planner**: Analyzes query and creates research strategy
    - Generates search keywords
@@ -224,41 +242,52 @@ The research process follows a LangGraph state machine with 9 nodes:
    - Tavily AI web search (advanced mode)
    - Reddit post and comment search via YARS
    - Discovers relevant subreddits
+   - **All searches run in parallel using asyncio.gather()**
 
 3. **Content Scraper**: Gathers content from URLs and threads
    - Web page scraping with BeautifulSoup
    - Reddit thread analysis with comments
    - Content extraction and cleaning
+   - **All scraping tasks run in parallel**
 
 4. **Content Analyzer**: Summarizes and analyzes all sources
    - Azure OpenAI GPT-5.1 summarization
    - Entity extraction (people, organizations, locations)
    - Sentiment analysis
+   - **All summarizations run in parallel**
 
-5. **Consensus Builder**: Builds community consensus from Reddit
-   - Identifies common themes
-   - Determines agreement levels
-   - Extracts majority and minority opinions
+5. **Parallel Consensus & Validation**: Combined high-performance node
+   - **Runs consensus building and cross-referencing simultaneously**
+   - Builds community consensus from Reddit discussions
+   - Identifies common themes and agreement levels
+   - Cross-references facts across all sources
+   - Detects contradictions and assesses confidence
+   - Extracts expert opinions in parallel
 
-6. **Cross-Reference Validator**: Verifies facts across sources
-   - Identifies corroborated facts
-   - Detects contradictions
-   - Assesses confidence levels
-
-7. **Synthesis Generator**: Creates comprehensive research report
+6. **Synthesis Generator**: Creates comprehensive research report
    - Combines web and Reddit insights
    - Structures findings with citations
    - Highlights expert opinions
 
-8. **Quality Checker**: Evaluates and decides on iteration
+7. **Quality Checker**: Evaluates and decides on iteration
    - Checks completeness
    - Determines if additional research needed
    - Controls iteration loop
 
-9. **Gap Filler**: Identifies gaps for next iteration (if needed)
+8. **Gap Filler**: Identifies gaps for next iteration (if needed)
    - Analyzes current findings
    - Generates targeted search queries
    - Refines research focus
+
+### Performance Optimizations
+
+The workflow is heavily optimized for speed:
+
+- **Within-node parallelization**: All I/O-bound operations use `asyncio.gather()` for concurrent execution
+- **Combined nodes**: Consensus building and cross-referencing run simultaneously
+- **Configurable rate limiting**: Reddit request delay reduced to 0.5s (configurable)
+- **Reduced defaults**: Fewer iterations and sources for faster results
+- **Recursion limit**: Increased to 100 to support multiple iterations without errors
 
 ## 🎯 Use Cases
 
@@ -296,7 +325,7 @@ deepresearch agent/
 │   ├── requirements.txt
 │   ├── .env.example
 │   └── .env                        # Your API keys (create this)
-├── frontend/
+├── frontend/                        # Legacy HTML/CSS/JS frontend
 │   ├── index.html                  # Main UI
 │   ├── css/
 │   │   └── styles.css
@@ -304,6 +333,14 @@ deepresearch agent/
 │       ├── main.js                 # Application logic
 │       ├── api.js                  # API client
 │       └── ui.js                   # UI updates
+├── frontend-nextjs/                 # Modern Next.js frontend (Recommended)
+│   ├── app/                        # Next.js app directory
+│   ├── components/                 # React components
+│   │   ├── ui/                     # shadcn/ui components
+│   │   └── research/               # Research-specific components
+│   ├── lib/                        # Utilities and API client
+│   ├── types/                      # TypeScript types
+│   └── package.json
 ├── plan.md                         # Original project plan
 ├── README.md                       # This file
 ├── ARCHITECTURE.tex                # System architecture (LaTeX)
@@ -350,9 +387,13 @@ deepresearch agent/
 - Tenacity - Retry logic
 
 **Frontend:**
-- Vanilla JavaScript - No framework dependencies
-- WebSocket API - Real-time communication
-- Modern CSS - Responsive design
+- **Next.js 14** - Modern React framework with App Router
+- **React 18** - UI library with TypeScript
+- **shadcn/ui** - High-quality component library
+- **Tailwind CSS** - Utility-first CSS framework
+- **Framer Motion** - Smooth animations and transitions
+- **WebSocket API** - Real-time communication
+- Legacy HTML/CSS/JS frontend also available in `frontend/` directory
 
 ### Adding New LLM Providers
 
