@@ -18,12 +18,13 @@ class YARSRedditClient:
     No Reddit API keys required - uses public JSON endpoints
     """
 
-    def __init__(self, user_agent: str = "DeepResearchAgent/1.0"):
+    def __init__(self, user_agent: str = "DeepResearchAgent/1.0", request_delay: float = 0.5):
         """
         Initialize YARS Reddit client
 
         Args:
             user_agent: User agent string
+            request_delay: Delay between requests in seconds (default: 0.5)
         """
         self.headers = {
             "User-Agent": user_agent
@@ -31,6 +32,7 @@ class YARSRedditClient:
         self.base_url = "https://www.reddit.com"
         self.session = requests.Session()
         self.session.headers.update(self.headers)
+        self.request_delay = request_delay
 
     def _make_request(self, url: str, params: Optional[Dict] = None) -> Optional[Dict]:
         """
@@ -52,7 +54,7 @@ class YARSRedditClient:
             response.raise_for_status()
 
             # Rate limiting - be respectful to Reddit
-            time.sleep(1)
+            time.sleep(self.request_delay)
 
             return response.json()
 

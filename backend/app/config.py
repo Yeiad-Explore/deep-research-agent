@@ -18,9 +18,10 @@ class Settings(BaseSettings):
 
     # Application Configuration
     cors_origins: str = "http://localhost:3000,http://localhost:8000"
-    max_iterations: int = 5
-    default_search_results: int = 15
-    default_reddit_posts: int = 50
+    max_iterations: int = 3  # Reduced from 5 for faster research
+    default_search_results: int = 10  # Reduced from 15
+    default_reddit_posts: int = 30  # Reduced from 50
+    langgraph_recursion_limit: int = 100  # Allow 9 nodes × max iterations
 
     # Search Configuration
     search_timeout: int = 30
@@ -29,6 +30,9 @@ class Settings(BaseSettings):
     # Content Scraping
     max_content_length: int = 50000
     scrape_timeout: int = 10
+
+    # Reddit Rate Limiting
+    reddit_request_delay: float = 0.5  # Reduced from 1.0 second for faster scraping
 
     class Config:
         env_file = ".env"

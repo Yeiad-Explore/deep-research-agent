@@ -26,17 +26,11 @@ class ResearchRequest(BaseModel):
 
 
 class ResearchResponse(BaseModel):
-    """Research response to user"""
+    """Simplified research response - single AI answer"""
     session_id: str
     query: str
-    final_synthesis: str
-    web_summaries: List[Dict[str, Any]]
-    reddit_summaries: List[Dict[str, Any]]
-    community_consensus: Dict[str, Any]
-    cross_reference: Dict[str, Any]
-    sources: List[Dict[str, Any]]
-    confidence_scores: Dict[str, Any]
-    iterations_completed: int
+    response: str  # Single AI-generated answer
+    sources: List[Dict[str, Any]]  # Sources used for citations
     timestamp: datetime = Field(default_factory=datetime.now)
 
 
@@ -59,53 +53,34 @@ class ProgressUpdate(BaseModel):
 
 class ResearchState(TypedDict, total=False):
     """
-    Enhanced state schema for LangGraph research agent
+    Simplified state schema for LangGraph research agent
     """
     # Input
     query: str                              # User's research question
     research_config: Dict[str, Any]         # Configuration dict
 
     # Search Results
-    web_results: List[Dict[str, Any]]       # Parallel.ai web search results
+    web_results: List[Dict[str, Any]]       # Tavily web search results
     reddit_posts: List[Dict[str, Any]]      # YARS Reddit posts
     reddit_comments: List[Dict[str, Any]]   # YARS Reddit comments
-    reddit_threads: List[Dict[str, Any]]    # Full thread analyses
 
     # Content
     scraped_web_content: List[Dict[str, Any]]   # Scraped webpage content
-    reddit_discussions: List[Dict[str, Any]]    # Analyzed Reddit discussions
 
-    # Analysis
-    web_summaries: List[Dict[str, Any]]         # Summaries of web content
-    reddit_summaries: List[Dict[str, Any]]      # Summaries of Reddit discussions
-    expert_opinions: List[Dict[str, Any]]       # Extracted expert opinions from Reddit
-    community_consensus: Dict[str, Any]         # Reddit community consensus
+    # Analysis - Simplified
+    all_content: str                            # Combined content from all sources
 
-    # Cross-Reference
-    cross_reference: Dict[str, Any]             # Cross-reference analysis
-    corroborated_facts: List[str]               # Facts supported by multiple sources
-    contradictions: List[Dict[str, Any]]        # Conflicting information
-
-    # Synthesis
-    preliminary_synthesis: str                  # Initial synthesis
-    final_synthesis: str                        # Final research report
+    # Final Response
+    final_response: str                         # Single AI-generated answer
     sources: List[Dict[str, Any]]               # All citation sources
-    confidence_scores: Dict[str, Any]           # Confidence in findings
 
     # Control Flow
-    iteration: int                              # Current iteration
-    max_iterations: int                         # Max iterations
     research_complete: bool                     # Completion flag
     errors: List[str]                           # Error tracking
 
     # Metadata
     search_keywords: List[str]                  # Generated search terms
     relevant_subreddits: List[str]              # Identified subreddits
-    research_plan: Dict[str, Any]               # Research strategy plan
-
-    # Gap Analysis
-    identified_gaps: List[str]                  # Knowledge gaps
-    refinement_queries: List[str]               # Queries for next iteration
 
 
 # ===== Helper Models =====

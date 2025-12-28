@@ -102,86 +102,60 @@ class AzureOpenAIClient:
             logger.error(f"Error in Azure OpenAI streaming: {e}")
             raise
 
-    async def comprehensive_synthesis(
+    async def generate_answer(
         self,
         query: str,
-        web_summaries: List[Dict[str, Any]],
-        reddit_summaries: List[Dict[str, Any]],
-        consensus: Dict[str, Any],
+        all_content: str,
         sources: List[Dict[str, Any]]
     ) -> str:
         """
-        Generate comprehensive research synthesis using GPT-4
+        Generate a simple, conversational answer to the query using gathered research
 
         Args:
             query: Original research query
-            web_summaries: Summaries from web sources
-            reddit_summaries: Summaries from Reddit discussions
-            consensus: Community consensus data
-            sources: All source references
+            all_content: Combined content from all sources
+            sources: All source references for citations
 
         Returns:
-            Final comprehensive research report
+            Single AI-generated answer
         """
-        # Build context from all sources
-        web_context = "\n\n".join([
-            f"Source: {s.get('title', 'Unknown')}\n{s.get('summary', '')}"
-            for s in web_summaries
+        # Create sources list for reference
+        sources_text = "\n".join([
+            f"[{i+1}] {s.get('title', 'Unknown')} - {s.get('url', '')}"
+            for i, s in enumerate(sources[:20])  # Limit to 20 sources
         ])
-
-        reddit_context = "\n\n".join([
-            f"Reddit Discussion: {s.get('title', 'Unknown')}\n{s.get('summary', '')}"
-            for s in reddit_summaries
-        ])
-
-        consensus_text = f"""
-Community Consensus:
-- Overall Sentiment: {consensus.get('sentiment', 'neutral')}
-- Agreement Level: {consensus.get('agreement_level', 'unknown')}
-- Key Themes: {', '.join(consensus.get('themes', []))}
-"""
 
         messages = [
             {
                 "role": "system",
-                "content": """You are an expert research analyst. Create comprehensive, well-structured research reports that:
-1. Synthesize information from multiple sources
-2. Distinguish between facts and opinions
-3. Present community perspectives alongside factual findings
-4. Include inline citations
-5. Identify contradictions and debates
-6. Note confidence levels and knowledge gaps
-7. Provide balanced, objective analysis"""
+                "content": """You are a helpful AI research assistant. Answer the user's question using the provided research material.
+
+Guidelines:
+- Provide a clear, conversational answer
+- Use information from the sources provided
+- Include inline citations like [1], [2] when referencing sources
+- Be concise but comprehensive
+- If sources disagree, mention different perspectives
+- If information is limited, acknowledge it
+- Don't create a structured report, just answer the question naturally"""
             },
             {
                 "role": "user",
-                "content": f"""Research Query: {query}
+                "content": f"""Question: {query}
 
-WEB SOURCES:
-{web_context}
+Research Material:
+{all_content[:15000]}
 
-REDDIT DISCUSSIONS:
-{reddit_context}
+Available Sources:
+{sources_text}
 
-{consensus_text}
-
-Create a comprehensive research report that answers the query. Structure it with:
-1. Executive Summary
-2. Factual Findings (from web sources)
-3. Community Perspectives (from Reddit)
-4. Expert Opinions
-5. Contradictions and Debates
-6. Confidence Assessment
-7. Knowledge Gaps
-8. Conclusion
-
-Use inline citations [Source N] and maintain objectivity."""
+Please answer the question using the research material above. Include citations [N] when referencing specific information."""
             }
         ]
 
         return await self.chat_completion(
             messages,
-            max_completion_tokens=3000
+            max_completion_tokens=2000
         )
 
     async def analyze_gaps(

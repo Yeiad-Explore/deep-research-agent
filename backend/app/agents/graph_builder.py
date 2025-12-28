@@ -62,7 +62,8 @@ def build_research_graph():
     )
 
     yars_client = YARSRedditClient(
-        user_agent="DeepResearchAgent/1.0"
+        user_agent="DeepResearchAgent/1.0",
+        request_delay=settings.reddit_request_delay
     )
 
     web_scraper = WebScraper(
@@ -84,18 +85,13 @@ def build_research_graph():
     # Create StateGraph
     workflow = StateGraph(ResearchState)
 
-    # Add nodes to graph
+    # Add nodes to graph (4 nodes - simplified)
     workflow.add_node("query_planner", nodes.query_planner)
     workflow.add_node("multi_source_searcher", nodes.multi_source_searcher)
     workflow.add_node("content_scraper", nodes.content_scraper)
-    workflow.add_node("content_analyzer", nodes.content_analyzer)
-    workflow.add_node("consensus_builder", nodes.consensus_builder)
-    workflow.add_node("cross_reference", nodes.cross_reference_validator)
-    workflow.add_node("synthesis", nodes.synthesis_generator)
-    workflow.add_node("quality_checker", nodes.quality_checker)
-    workflow.add_node("gap_filler", nodes.gap_filler)
+    workflow.add_node("answer_generator", nodes.answer_generator)
 
-    # Define graph flow
+    # Define simplified graph flow (no iteration loop)
     # START → Query Planner
     workflow.set_entry_point("query_planner")
 
@@ -105,35 +101,13 @@ def build_research_graph():
     # Multi-Source Searcher → Content Scraper
     workflow.add_edge("multi_source_searcher", "content_scraper")
 
-    # Content Scraper → Content Analyzer
-    workflow.add_edge("content_scraper", "content_analyzer")
+    # Content Scraper → Answer Generator
+    workflow.add_edge("content_scraper", "answer_generator")
 
-    # Content Analyzer → Consensus Builder
-    workflow.add_edge("content_analyzer", "consensus_builder")
+    # Answer Generator → END (always complete in one pass)
+    workflow.add_edge("answer_generator", END)
 
-    # Consensus Builder → Cross-Reference Validator
-    workflow.add_edge("consensus_builder", "cross_reference")
-
-    # Cross-Reference → Synthesis Generator
-    workflow.add_edge("cross_reference", "synthesis")
-
-    # Synthesis → Quality Checker
-    workflow.add_edge("synthesis", "quality_checker")
-
-    # Quality Checker → Conditional (Complete or Continue)
-    workflow.add_conditional_edges(
-        "quality_checker",
-        should_continue_research,
-        {
-            "end": END,
-            "continue": "gap_filler"
-        }
-    )
-
-    # Gap Filler → Multi-Source Searcher (for next iteration)
-    workflow.add_edge("gap_filler", "multi_source_searcher")
-
-    # Compile the graph
+    # Compile the graph with recursion limit
     app = workflow.compile()
 
     logger.info("Research graph built successfully")
@@ -170,41 +144,32 @@ async def run_research(query: str, config: dict = None) -> dict:
     """
     logger.info(f"Starting research for: {query}")
 
-    # Initialize state
+    # Initialize simplified state
     initial_state: ResearchState = {
         "query": query,
         "research_config": config or {},
-        "max_iterations": config.get("max_iterations", 3) if config else 3,
-        "iteration": 0,
         "research_complete": False,
         "errors": [],
         "web_results": [],
         "reddit_posts": [],
         "reddit_comments": [],
-        "reddit_threads": [],
         "scraped_web_content": [],
-        "reddit_discussions": [],
-        "web_summaries": [],
-        "reddit_summaries": [],
-        "expert_opinions": [],
-        "community_consensus": {},
-        "cross_reference": {},
-        "corroborated_facts": [],
-        "contradictions": [],
         "sources": [],
-        "confidence_scores": {},
         "search_keywords": [],
         "relevant_subreddits": [],
-        "identified_gaps": [],
-        "refinement_queries": []
+        "all_content": "",
+        "final_response": ""
     }
 
     # Get graph
     graph = get_research_graph()
 
-    # Run graph
+    # Run graph with recursion limit
     try:
-        final_state = await graph.ainvoke(initial_state)
+        final_state = await graph.ainvoke(
+            initial_state,
+            config={"recursion_limit": settings.langgraph_recursion_limit}
+        )
         logger.info("Research completed successfully")
         return final_state
     except Exception as e:
@@ -225,41 +190,32 @@ async def stream_research(query: str, config: dict = None):
     """
     logger.info(f"Starting streaming research for: {query}")
 
-    # Initialize state
+    # Initialize simplified state
     initial_state: ResearchState = {
         "query": query,
         "research_config": config or {},
-        "max_iterations": config.get("max_iterations", 3) if config else 3,
-        "iteration": 0,
         "research_complete": False,
         "errors": [],
         "web_results": [],
         "reddit_posts": [],
         "reddit_comments": [],
-        "reddit_threads": [],
         "scraped_web_content": [],
-        "reddit_discussions": [],
-        "web_summaries": [],
-        "reddit_summaries": [],
-        "expert_opinions": [],
-        "community_consensus": {},
-        "cross_reference": {},
-        "corroborated_facts": [],
-        "contradictions": [],
         "sources": [],
-        "confidence_scores": {},
         "search_keywords": [],
         "relevant_subreddits": [],
-        "identified_gaps": [],
-        "refinement_queries": []
+        "all_content": "",
+        "final_response": ""
     }
 
     # Get graph
     graph = get_research_graph()
 
-    # Stream graph execution
+    # Stream graph execution with recursion limit
     try:
-        async for state in graph.astream(initial_state):
+        async for state in graph.astream(
+            initial_state,
+            config={"recursion_limit": settings.langgraph_recursion_limit}
+        ):
             yield state
     except Exception as e:
         logger.error(f"Error during streaming research: {e}", exc_info=True)

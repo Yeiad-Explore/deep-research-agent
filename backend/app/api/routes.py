@@ -44,19 +44,12 @@ async def create_research(request: ResearchRequest):
             config=request.config.model_dump()
         )
 
-        # Create response
+        # Create simplified response
         response_data = {
             "session_id": session_id,
             "query": request.query,
-            "final_synthesis": final_state.get("final_synthesis", ""),
-            "web_summaries": final_state.get("web_summaries", []),
-            "reddit_summaries": final_state.get("reddit_summaries", []),
-            "community_consensus": final_state.get("community_consensus", {}),
-            "cross_reference": final_state.get("cross_reference", {}),
-            "expert_opinions": final_state.get("expert_opinions", []),
+            "response": final_state.get("final_response", ""),
             "sources": final_state.get("sources", []),
-            "confidence_scores": final_state.get("confidence_scores", {}),
-            "iterations_completed": final_state.get("iteration", 0),
             "timestamp": datetime.now().isoformat()
         }
 
@@ -116,10 +109,8 @@ async def refine_research(session_id: str, request: RefinementRequest):
             config={"max_iterations": 2}
         )
 
-        # Update session
-        original_session["final_synthesis"] = final_state.get("final_synthesis", "")
-        original_session["web_summaries"].extend(final_state.get("web_summaries", []))
-        original_session["reddit_summaries"].extend(final_state.get("reddit_summaries", []))
+        # Update session with refined answer
+        original_session["response"] = final_state.get("final_response", "")
         original_session["sources"].extend(final_state.get("sources", []))
         original_session["timestamp"] = datetime.now().isoformat()
 
@@ -245,9 +236,8 @@ async def websocket_research(websocket: WebSocket):
                 "data": {
                     "web_results": len(node_state.get("web_results", [])),
                     "reddit_posts": len(node_state.get("reddit_posts", [])),
-                    "web_summaries": len(node_state.get("web_summaries", [])),
-                    "reddit_summaries": len(node_state.get("reddit_summaries", [])),
-                    "iteration": node_state.get("iteration", 0)
+                    "reddit_comments": len(node_state.get("reddit_comments", [])),
+                    "scraped_content": len(node_state.get("scraped_web_content", []))
                 }
             }
 
@@ -255,18 +245,13 @@ async def websocket_research(websocket: WebSocket):
 
             # Check if complete
             if node_state.get("research_complete"):
-                # Send final result
+                # Send simplified final result
                 result = {
                     "status": "complete",
                     "session_id": session_id,
                     "result": {
-                        "final_synthesis": node_state.get("final_synthesis", ""),
-                        "web_summaries": node_state.get("web_summaries", []),
-                        "reddit_summaries": node_state.get("reddit_summaries", []),
-                        "community_consensus": node_state.get("community_consensus", {}),
-                        "cross_reference": node_state.get("cross_reference", {}),
-                        "sources": node_state.get("sources", []),
-                        "confidence_scores": node_state.get("confidence_scores", {})
+                        "response": node_state.get("final_response", ""),
+                        "sources": node_state.get("sources", [])
                     }
                 }
 
