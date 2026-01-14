@@ -1,8 +1,7 @@
 """
-Configuration management for Deep Research Agent
+Configuration management for Deep Research Tool
 """
 from pydantic_settings import BaseSettings
-from typing import List
 
 
 class Settings(BaseSettings):
@@ -17,10 +16,9 @@ class Settings(BaseSettings):
     azure_openai_deployment_name: str = "gpt-5.1-chat"
 
     # Application Configuration
-    cors_origins: str = "http://localhost:3000,http://localhost:8000"
-    max_iterations: int = 3  # Reduced from 5 for faster research
+    max_iterations: int = 3
     default_search_results: int = 15
-    langgraph_recursion_limit: int = 100  # Allow 4 nodes × max iterations
+    langgraph_recursion_limit: int = 100
 
     # Search Configuration
     search_timeout: int = 30
@@ -33,12 +31,7 @@ class Settings(BaseSettings):
     class Config:
         env_file = ".env"
         case_sensitive = False
-        extra = "ignore"  # Ignore extra fields from .env (like old Reddit settings)
-
-    @property
-    def cors_origins_list(self) -> List[str]:
-        """Parse CORS origins into a list"""
-        return [origin.strip() for origin in self.cors_origins.split(",")]
+        extra = "ignore"
 
 
 # Global settings instance

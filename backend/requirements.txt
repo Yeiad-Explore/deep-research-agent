@@ -1,5 +1,3 @@
-fastapi
-uvicorn[standard]
 langgraph
 langchain
 langchain-openai
@@ -9,10 +7,6 @@ pydantic
 pydantic-settings
 httpx
 beautifulsoup4
-aiohttp
-python-multipart
-requests
 lxml
-websockets
 tenacity
 tavily-python
