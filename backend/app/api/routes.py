@@ -124,69 +124,6 @@ async def refine_research(session_id: str, request: RefinementRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/api/subreddits/discover")
-async def discover_subreddits(topic: str, limit: int = 10):
-    """
-    Discover relevant subreddits for a topic
-
-    Args:
-        topic: Topic to search
-        limit: Maximum subreddits to return
-
-    Returns:
-        List of relevant subreddits
-    """
-    try:
-        from app.scrapers.yars_client import YARSRedditClient
-
-        yars = YARSRedditClient(user_agent="DeepResearchAgent/1.0")
-
-        subreddits = await yars.get_subreddit_recommendations(topic, limit)
-        await yars.close()
-
-        return {"topic": topic, "subreddits": subreddits}
-
-    except Exception as e:
-        logger.error(f"Error discovering subreddits: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@router.post("/api/reddit/analyze-thread")
-async def analyze_thread(thread_url: str, depth: str = "full"):
-    """
-    Analyze a specific Reddit thread
-
-    Args:
-        thread_url: Reddit thread URL
-        depth: Analysis depth (full/summary)
-
-    Returns:
-        Thread analysis
-    """
-    try:
-        from app.scrapers.yars_client import YARSRedditClient
-
-        yars = YARSRedditClient(user_agent="DeepResearchAgent/1.0")
-
-        comment_limit = 100 if depth == "full" else 25
-        thread_data = await yars.get_post_with_comments(thread_url, comment_limit)
-        sentiment = await yars.analyze_thread_sentiment(thread_url)
-
-        await yars.close()
-
-        return {
-            "thread_url": thread_url,
-            "post": thread_data.get("post", {}),
-            "comments": thread_data.get("comments", []),
-            "total_comments": thread_data.get("total_comments", 0),
-            "sentiment": sentiment
-        }
-
-    except Exception as e:
-        logger.error(f"Error analyzing thread: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
-
-
 @router.websocket("/ws/research")
 async def websocket_research(websocket: WebSocket):
     """
@@ -233,12 +170,10 @@ async def websocket_research(websocket: WebSocket):
                 "status": "in_progress",
                 "stage": node_name,
                 "message": f"Completed {node_name}",
-                "data": {
-                    "web_results": len(node_state.get("web_results", [])),
-                    "reddit_posts": len(node_state.get("reddit_posts", [])),
-                    "reddit_comments": len(node_state.get("reddit_comments", [])),
-                    "scraped_content": len(node_state.get("scraped_web_content", []))
-                }
+                    "data": {
+                        "web_results": len(node_state.get("web_results", [])),
+                        "scraped_content": len(node_state.get("scraped_web_content", []))
+                    }
             }
 
             await websocket.send_json(progress)

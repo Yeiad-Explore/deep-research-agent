@@ -1,16 +1,14 @@
 # 🔬 Deep Research Agent
 
-AI-powered deep research agent combining LangGraph orchestration, Tavily AI Search, YARS for Reddit insights, and Azure OpenAI GPT-5.1 for comprehensive synthesis.
+AI-powered deep web research agent combining LangGraph orchestration, Tavily AI Search, and Azure OpenAI GPT-5.1 for comprehensive web research and synthesis.
 
 ## 🌟 Features
 
-- **Multi-Source Research**: Combines web search and Reddit community insights
+- **Deep Web Research**: Comprehensive web search and content analysis
 - **LangGraph Orchestration**: Sophisticated AI workflow with parallel execution
 - **Tavily AI Search**: AI-optimized web search specifically designed for LLM applications
 - **Real-Time Streaming**: WebSocket-based progress updates
-- **Community Consensus**: Analyzes Reddit discussions for community opinions
-- **Expert Opinion Extraction**: Identifies and highlights expert contributions
-- **Cross-Reference Validation**: Verifies facts across multiple sources
+- **Cross-Reference Validation**: Verifies facts across multiple web sources
 - **Comprehensive Reports**: Generates detailed research syntheses with citations
 - **Interactive UI**: Modern, responsive interface with live updates
 - **Modern Frontend**: Next.js frontend with shadcn/ui, animations, and better UX
@@ -21,7 +19,6 @@ AI-powered deep research agent combining LangGraph orchestration, Tavily AI Sear
 - API Keys:
   - Tavily AI API key (for web search)
   - Azure OpenAI API credentials (GPT-5.1)
-- **NO Reddit API keys needed!** YARS uses public JSON endpoints
 
 ## 🚀 Quick Start
 
@@ -68,14 +65,12 @@ AZURE_OPENAI_DEPLOYMENT_NAME=gpt-5.1-chat
 
 # Application Configuration
 CORS_ORIGINS=http://localhost:3000,http://localhost:8000
-MAX_ITERATIONS=5
+MAX_ITERATIONS=3
 DEFAULT_SEARCH_RESULTS=15
-DEFAULT_REDDIT_POSTS=50
 ```
 
 **Important Notes:**
 - **Tavily AI** provides AI-optimized search results with up to 20 results in advanced mode
-- **YARS** (Reddit scraper) requires NO API keys - it uses Reddit's public JSON endpoints
 - **GPT-5.1** only supports `temperature=1` and uses `max_completion_tokens` parameter
 
 ### 4. Run the Application
@@ -131,15 +126,11 @@ Start a new research session.
 **Request:**
 ```json
 {
-  "query": "What are developers saying about Python 3.13?",
+  "query": "What are the latest developments in Python 3.13?",
   "config": {
     "depth": "standard",
     "max_iterations": 3,
-    "include_reddit": true,
-    "subreddits": ["python", "programming"],
-    "time_filter": "month",
-    "max_web_results": 15,
-    "max_reddit_posts": 50
+    "max_web_results": 15
   }
 }
 ```
@@ -149,13 +140,9 @@ Start a new research session.
 {
   "session_id": "uuid",
   "query": "...",
-  "final_synthesis": "...",
-  "web_summaries": [...],
-  "reddit_summaries": [...],
-  "community_consensus": {...},
-  "cross_reference": {...},
+  "response": "...",
   "sources": [...],
-  "confidence_scores": {...}
+  "timestamp": "..."
 }
 ```
 
@@ -169,7 +156,7 @@ const ws = new WebSocket('ws://localhost:8000/ws/research');
 
 ws.send(JSON.stringify({
   query: "your research query",
-  config: { depth: "standard", include_reddit: true }
+  config: { depth: "standard", max_web_results: 15 }
 }));
 
 ws.onmessage = (event) => {
@@ -186,26 +173,6 @@ Retrieve a completed research session.
 
 Refine existing research with additional focus.
 
-### GET /api/subreddits/discover
-
-Discover relevant subreddits for a topic.
-
-**Query Parameters:**
-- `topic`: Topic to search for
-- `limit`: Maximum number of subreddits (default: 10)
-
-### POST /api/reddit/analyze-thread
-
-Deep analysis of a specific Reddit thread.
-
-**Request:**
-```json
-{
-  "post_url": "https://reddit.com/r/python/comments/...",
-  "comment_limit": 100
-}
-```
-
 ## 🏗️ Architecture
 
 ```
@@ -213,81 +180,53 @@ Deep analysis of a specific Reddit thread.
 │                    FastAPI Backend                       │
 ├─────────────────────────────────────────────────────────┤
 │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐ │
-│  │   LangGraph  │  │  Tavily AI   │  │     YARS     │ │
-│  │ Orchestrator │  │    Search    │  │Reddit Scraper│ │
+│  │   LangGraph  │  │  Tavily AI   │  │ Azure OpenAI │ │
+│  │ Orchestrator │  │    Search    │  │  GPT-5.1     │ │
 │  └──────────────┘  └──────────────┘  └──────────────┘ │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐ │
-│  │ Azure OpenAI │  │ Web Scraper  │  │   Research   │ │
-│  │  GPT-5.1     │  │              │  │     Tools    │ │
-│  └──────────────┘  └──────────────┘  └──────────────┘ │
+│  ┌──────────────┐  ┌──────────────┐                    │
+│  │ Web Scraper  │  │   Research   │                    │
+│  │              │  │     Tools    │                    │
+│  └──────────────┘  └──────────────┘                    │
 └─────────────────────────────────────────────────────────┘
                             │
                             ▼
 ┌─────────────────────────────────────────────────────────┐
-│              HTML/CSS/JS Frontend                        │
+│              Next.js Frontend                            │
 │  WebSocket Streaming • Live Updates • Export Features   │
 └─────────────────────────────────────────────────────────┘
 ```
 
 ## 🔄 Research Workflow
 
-The research process follows a LangGraph state machine with 8 highly optimized nodes:
+The research process follows a LangGraph state machine with 4 optimized nodes:
 
 1. **Query Planner**: Analyzes query and creates research strategy
-   - Generates search keywords
-   - Identifies relevant subreddits
+   - Generates optimal search keywords
    - Plans research approach
 
-2. **Multi-Source Searcher**: Parallel search across web and Reddit
+2. **Web Searcher**: Searches the web using Tavily AI
    - Tavily AI web search (advanced mode)
-   - Reddit post and comment search via YARS
-   - Discovers relevant subreddits
-   - **All searches run in parallel using asyncio.gather()**
+   - Returns up to 20 high-quality results
 
-3. **Content Scraper**: Gathers content from URLs and threads
+3. **Content Scraper**: Gathers content from URLs
    - Web page scraping with BeautifulSoup
-   - Reddit thread analysis with comments
    - Content extraction and cleaning
    - **All scraping tasks run in parallel**
 
-4. **Content Analyzer**: Summarizes and analyzes all sources
-   - Azure OpenAI GPT-5.1 summarization
-   - Entity extraction (people, organizations, locations)
-   - Sentiment analysis
-   - **All summarizations run in parallel**
-
-5. **Parallel Consensus & Validation**: Combined high-performance node
-   - **Runs consensus building and cross-referencing simultaneously**
-   - Builds community consensus from Reddit discussions
-   - Identifies common themes and agreement levels
-   - Cross-references facts across all sources
-   - Detects contradictions and assesses confidence
-   - Extracts expert opinions in parallel
-
-6. **Synthesis Generator**: Creates comprehensive research report
-   - Combines web and Reddit insights
+4. **Answer Generator**: Generates comprehensive answer
+   - Combines all scraped web content
+   - Uses Azure OpenAI GPT-5.1 for synthesis
    - Structures findings with citations
-   - Highlights expert opinions
-
-7. **Quality Checker**: Evaluates and decides on iteration
-   - Checks completeness
-   - Determines if additional research needed
-   - Controls iteration loop
-
-8. **Gap Filler**: Identifies gaps for next iteration (if needed)
-   - Analyzes current findings
-   - Generates targeted search queries
-   - Refines research focus
+   - Creates detailed research answer
 
 ### Performance Optimizations
 
-The workflow is heavily optimized for speed:
+The workflow is optimized for speed:
 
-- **Within-node parallelization**: All I/O-bound operations use `asyncio.gather()` for concurrent execution
-- **Combined nodes**: Consensus building and cross-referencing run simultaneously
-- **Configurable rate limiting**: Reddit request delay reduced to 0.5s (configurable)
-- **Reduced defaults**: Fewer iterations and sources for faster results
-- **Recursion limit**: Increased to 100 to support multiple iterations without errors
+- **Parallel execution**: All I/O-bound operations use `asyncio.gather()` for concurrent execution
+- **Efficient scraping**: Multiple URLs scraped simultaneously
+- **Reduced defaults**: Optimized iteration count and result limits for faster results
+- **Recursion limit**: Set to 100 to support multiple iterations without errors
 
 ## 🎯 Use Cases
 
@@ -318,7 +257,6 @@ deepresearch agent/
 │   │   │   ├── tavily_client.py    # Tavily AI Search client
 │   │   │   └── azure_client.py     # Azure OpenAI GPT-5.1 client
 │   │   ├── scrapers/
-│   │   │   ├── yars_client.py      # YARS Reddit client
 │   │   │   └── web_scraper.py      # Web scraper (aiohttp)
 │   │   └── api/
 │   │       └── routes.py           # API endpoints & WebSocket
@@ -359,13 +297,6 @@ deepresearch agent/
 - Number of results (default: 15, max: 20 for advanced)
 - Search depth: basic or advanced (Tavily)
 - Domain filtering (include/exclude specific domains)
-
-### Reddit Options
-- Enable/disable Reddit inclusion
-- Specify target subreddits
-- Time filters: day/week/month/year/all
-- Control number of posts/comments
-- Comment depth for thread analysis
 
 ### Scraping Options
 - Timeout settings
@@ -462,22 +393,10 @@ If WebSocket streaming doesn't work:
 - GPT-5.1 uses `max_completion_tokens` instead
 - This has been fixed in the latest version
 
-### Reddit Scraping Issues
-
-**Error: Too many requests**
-- YARS has built-in rate limiting (1 second delay)
-- Reduce `max_reddit_posts` if hitting limits
-
-**Error: No data returned**
-- Check subreddit names are correct
-- Verify subreddit is public
-- Try different time filters
-
 ### Rate Limiting
 
 The application includes:
 - Automatic retries with exponential backoff (via Tenacity)
-- 1-second delay between Reddit requests
 - Configurable timeout settings
 - Error handling for rate limit scenarios
 
@@ -492,10 +411,9 @@ The application includes:
 ## 📊 Performance Tips
 
 1. **Reduce iterations** for faster results (1-2 instead of 3-5)
-2. **Limit sources**: Fewer web results and Reddit posts = faster processing
-3. **Disable Reddit** for web-only research
-4. **Use Quick depth** for simple queries
-5. **Specify subreddits** instead of letting the agent discover them
+2. **Limit sources**: Fewer web results = faster processing
+3. **Use Quick depth** for simple queries
+4. **Adjust max_web_results** based on your needs (default: 15)
 
 ## 🧪 Testing
 
@@ -514,11 +432,6 @@ Test individual components:
 from app.llm.tavily_client import TavilySearchClient
 client = TavilySearchClient(api_key="your_key")
 results = await client.web_search("test query")
-
-# Test YARS
-from app.scrapers.yars_client import YARSRedditClient
-yars = YARSRedditClient(user_agent="TestAgent/1.0")
-posts = yars.search_posts("python", limit=10)
 ```
 
 ## 📄 License
@@ -549,7 +462,6 @@ For issues and questions, please create an issue in the repository.
 
 - **LangGraph** by LangChain - AI agent orchestration
 - **Tavily AI** - AI-optimized search API
-- **YARS** concept - Reddit scraping without API keys
 - **Azure OpenAI** - GPT-5.1 language model
 - **FastAPI** - Modern Python web framework
 
@@ -566,7 +478,7 @@ For issues and questions, please create an issue in the repository.
 
 ---
 
-**Built with**: LangGraph • Tavily AI • YARS • Azure OpenAI GPT-5.1 • FastAPI • Vanilla JS
+**Built with**: LangGraph • Tavily AI • Azure OpenAI GPT-5.1 • FastAPI • Next.js
 
 **Version**: 1.0.0
 **Last Updated**: December 2025

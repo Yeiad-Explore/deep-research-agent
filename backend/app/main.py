@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 # Create FastAPI app
 app = FastAPI(
     title="Deep Research Agent API",
-    description="AI-powered deep research agent with LangGraph, Parallel.ai, and YARS",
+    description="AI-powered deep web research agent with LangGraph, Tavily AI, and Azure OpenAI",
     version="1.0.0"
 )
 

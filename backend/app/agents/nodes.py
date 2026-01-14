@@ -38,7 +38,7 @@ class ResearchNodes:
         messages = [
             {
                 "role": "system",
-                "content": "You are a research planning expert. Analyze queries and determine search keywords and relevant subreddits. Return as JSON."
+                "content": "You are a research planning expert. Analyze queries and determine optimal search keywords. Return as JSON."
             },
             {
                 "role": "user",
@@ -48,8 +48,7 @@ Query: {query}
 
 Return JSON with:
 {{
-  "search_keywords": ["keyword1", "keyword2", ...],
-  "suggested_subreddits": ["sub1", "sub2", ...]
+  "search_keywords": ["keyword1", "keyword2", ...]
 }}"""
             }
         ]
@@ -64,63 +63,39 @@ Return JSON with:
             research_plan = json.loads(plan_response)
         except:
             research_plan = {
-                "search_keywords": [query],
-                "suggested_subreddits": []
+                "search_keywords": [query]
             }
 
         # Update state
         state["search_keywords"] = research_plan.get("search_keywords", [query])
-        state["relevant_subreddits"] = (
-            config.get("subreddits") or research_plan.get("suggested_subreddits", [])
-        )
 
-        logger.info(f"Plan created: {len(state['search_keywords'])} keywords, "
-                   f"{len(state['relevant_subreddits'])} subreddits")
+        logger.info(f"Plan created: {len(state['search_keywords'])} keywords")
 
         return state
 
     async def multi_source_searcher(self, state: ResearchState) -> ResearchState:
         """
-        Node 2: Multi-Source Searcher
-        Searches web and Reddit in parallel
+        Node 2: Web Searcher
+        Searches the web using Tavily AI
         """
-        logger.info("=== Multi-Source Searcher Node ===")
+        logger.info("=== Web Searcher Node ===")
 
         query = state["query"]
         keywords = state.get("search_keywords", [query])
         config = state.get("research_config", {})
 
-        # Prepare parallel search tasks
-        tasks = []
-
         # Web search
         search_query = " ".join(keywords[:3])  # Use first 3 keywords
-        num_results = config.get("max_web_results", 10)
-        tasks.append(self.tools.web_search(search_query, num_results))
+        num_results = config.get("max_web_results", 15)
 
-        # Reddit search (if enabled)
-        include_reddit = config.get("include_reddit", True)
-        if include_reddit:
-            subreddits = state.get("relevant_subreddits", [])
-            max_posts = config.get("max_reddit_posts", 30)
-            tasks.append(self.tools.reddit_post_search(query, subreddits, max_posts))
-            tasks.append(self.tools.reddit_comment_search(query, max_posts))
-        else:
-            tasks.append(asyncio.sleep(0, result=[]))
-            tasks.append(asyncio.sleep(0, result=[]))
-
-        # Execute all searches in parallel
-        results = await asyncio.gather(*tasks, return_exceptions=True)
-
-        # Process results
-        web_results = results[0] if not isinstance(results[0], Exception) else []
-        reddit_posts = results[1] if not isinstance(results[1], Exception) else []
-        reddit_comments = results[2] if not isinstance(results[2], Exception) else []
+        try:
+            web_results = await self.tools.web_search(search_query, num_results)
+        except Exception as e:
+            logger.error(f"Error in web search: {e}")
+            web_results = []
 
         # Update state
         state["web_results"] = web_results
-        state["reddit_posts"] = reddit_posts
-        state["reddit_comments"] = reddit_comments
 
         # Build sources list
         sources = []
@@ -130,18 +105,10 @@ Return JSON with:
                 "url": result.get("url", ""),
                 "type": "web"
             })
-        for post in reddit_posts:
-            sources.append({
-                "title": post.get("title", ""),
-                "url": post.get("url", ""),
-                "type": "reddit"
-            })
 
         state["sources"] = sources
 
-        logger.info(f"Search complete: {len(web_results)} web, "
-                   f"{len(reddit_posts)} Reddit posts, "
-                   f"{len(reddit_comments)} comments")
+        logger.info(f"Search complete: {len(web_results)} web results")
 
         return state
 
@@ -177,8 +144,6 @@ Return JSON with:
 
         # Combine all content
         web_content = state.get("scraped_web_content", [])
-        reddit_posts = state.get("reddit_posts", [])
-        reddit_comments = state.get("reddit_comments", [])
 
         # Build combined content string
         all_content_parts = []
@@ -189,18 +154,6 @@ Return JSON with:
                 title = item.get("title", "Unknown")
                 content = item.get("content", "")[:3000]  # Limit each source
                 all_content_parts.append(f"WEB SOURCE: {title}\n{content}")
-
-        # Add Reddit posts
-        for post in reddit_posts[:10]:
-            title = post.get("title", "")
-            body = post.get("body", "")[:1000]
-            subreddit = post.get("subreddit", "")
-            all_content_parts.append(f"REDDIT POST (r/{subreddit}): {title}\n{body}")
-
-        # Add Reddit comments
-        for comment in reddit_comments[:20]:
-            body = comment.get("body", "")[:500]
-            all_content_parts.append(f"REDDIT COMMENT: {body}")
 
         all_content = "\n\n---\n\n".join(all_content_parts)
 

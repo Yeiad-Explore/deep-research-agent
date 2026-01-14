@@ -1,11 +1,7 @@
 export interface ResearchConfig {
   depth?: "quick" | "standard" | "comprehensive";
   max_iterations?: number;
-  include_reddit?: boolean;
-  subreddits?: string[] | null;
-  time_filter?: string;
   max_web_results?: number;
-  max_reddit_posts?: number;
 }
 
 export interface ResearchRequest {
@@ -24,7 +20,7 @@ export interface ResearchResponse {
 export interface Source {
   title: string;
   url: string;
-  type?: "web" | "reddit";
+  type?: "web";
 }
 
 export interface ProgressUpdate {

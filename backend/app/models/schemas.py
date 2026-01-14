@@ -12,11 +12,7 @@ class ResearchConfig(BaseModel):
     """Configuration for research request"""
     depth: str = Field(default="standard", description="Research depth: quick/standard/comprehensive")
     max_iterations: int = Field(default=3, ge=1, le=10)
-    include_reddit: bool = Field(default=True)
-    subreddits: Optional[List[str]] = Field(default=None)
-    time_filter: str = Field(default="month")
     max_web_results: int = Field(default=15, ge=1, le=50)
-    max_reddit_posts: int = Field(default=50, ge=1, le=100)
 
 
 class ResearchRequest(BaseModel):
@@ -61,8 +57,6 @@ class ResearchState(TypedDict, total=False):
 
     # Search Results
     web_results: List[Dict[str, Any]]       # Tavily web search results
-    reddit_posts: List[Dict[str, Any]]      # YARS Reddit posts
-    reddit_comments: List[Dict[str, Any]]   # YARS Reddit comments
 
     # Content
     scraped_web_content: List[Dict[str, Any]]   # Scraped webpage content
@@ -80,7 +74,6 @@ class ResearchState(TypedDict, total=False):
 
     # Metadata
     search_keywords: List[str]                  # Generated search terms
-    relevant_subreddits: List[str]              # Identified subreddits
 
 
 # ===== Helper Models =====
@@ -94,31 +87,6 @@ class SearchResult(BaseModel):
     published_date: Optional[str] = None
     score: float = 0.0
     source_type: str = "web"  # web/reddit
-
-
-class RedditPost(BaseModel):
-    """Reddit post model"""
-    id: str
-    title: str
-    body: str
-    url: str
-    score: int
-    upvote_ratio: float
-    num_comments: int
-    author: str
-    subreddit: str
-    created_utc: str
-
-
-class RedditComment(BaseModel):
-    """Reddit comment model"""
-    body: str
-    score: int
-    author: str
-    post_title: str
-    post_url: str
-    subreddit: str
-    created_utc: str
 
 
 class ScrapedContent(BaseModel):
@@ -143,16 +111,6 @@ class ContentSummary(BaseModel):
     key_facts: List[str] = []
     credibility_score: float = 0.5
     sentiment: str = "neutral"
-
-
-class ConsensusAnalysis(BaseModel):
-    """Community consensus analysis"""
-    sentiment: str = "neutral"
-    agreement_level: str = "unknown"
-    themes: List[str] = []
-    majority_opinion: str = ""
-    minority_opinions: List[str] = []
-    confidence: float = 0.5
 
 
 class CrossReferenceAnalysis(BaseModel):

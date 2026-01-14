@@ -6,7 +6,7 @@ const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
   title: "Deep Research Agent - AI-Powered Research",
-  description: "AI-powered deep research agent with Web & Reddit community insights",
+  description: "AI-powered deep web research agent",
 }
 
 export default function RootLayout({

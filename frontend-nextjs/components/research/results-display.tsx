@@ -66,7 +66,6 @@ export function ResultsDisplay({ data, query, onRefine }: ResultsDisplayProps) {
   }
 
   const webSources = data.sources?.filter(s => s.type === "web" || !s.type) || []
-  const redditSources = data.sources?.filter(s => s.type === "reddit") || []
 
   return (
     <motion.div
@@ -94,11 +93,6 @@ export function ResultsDisplay({ data, query, onRefine }: ResultsDisplayProps) {
                 {webSources.length} Web
               </Badge>
             )}
-            {redditSources.length > 0 && (
-              <Badge variant="outline" className="text-sm">
-                {redditSources.length} Reddit
-              </Badge>
-            )}
           </div>
         </CardContent>
       </Card>
@@ -108,7 +102,7 @@ export function ResultsDisplay({ data, query, onRefine }: ResultsDisplayProps) {
         <CardHeader>
           <CardTitle>Answer</CardTitle>
           <CardDescription>
-            AI-generated response based on web and Reddit research
+            AI-generated response based on web research
           </CardDescription>
         </CardHeader>
         <CardContent className="pt-6">
@@ -139,11 +133,7 @@ export function ResultsDisplay({ data, query, onRefine }: ResultsDisplayProps) {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.05 }}
                 >
-                  <Card className={`border-l-4 ${
-                    source.type === "reddit" 
-                      ? "border-l-orange-500" 
-                      : "border-l-blue-500"
-                  }`}>
+                  <Card className="border-l-4 border-l-blue-500">
                     <CardHeader className="pb-3">
                       <div className="flex items-start justify-between gap-4">
                         <div className="flex-1">
@@ -163,9 +153,8 @@ export function ResultsDisplay({ data, query, onRefine }: ResultsDisplayProps) {
                         {source.type && (
                           <Badge 
                             variant="outline"
-                            className={source.type === "reddit" ? "border-orange-500 text-orange-600" : ""}
                           >
-                            {source.type === "reddit" ? "Reddit" : "Web"}
+                            Web
                           </Badge>
                         )}
                       </div>

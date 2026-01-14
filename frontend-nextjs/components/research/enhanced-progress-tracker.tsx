@@ -51,7 +51,7 @@ const stages: Stage[] = [
     label: "Multi-Source Search",
     icon: <Search className="h-6 w-6" />,
     nodeName: "multi_source_searcher",
-    description: "Parallel web & Reddit search",
+    description: "Web search",
     color: {
       active: "from-purple-500 to-pink-500",
       completed: "from-green-500 to-emerald-500",
@@ -96,7 +96,6 @@ const stageMap: Record<string, string> = {
 
 interface ProgressData {
   web_results?: number
-  reddit_posts?: number
   scraped_content?: number
 }
 
@@ -104,7 +103,7 @@ interface EnhancedProgressTrackerProps {
   currentStage?: string
   completedStages: Set<string>
   progressData?: ProgressData
-  sources?: Array<{ title: string; url: string; type: "web" | "reddit" }>
+  sources?: Array<{ title: string; url: string; type?: "web" }>
 }
 
 interface Particle {
@@ -112,7 +111,7 @@ interface Particle {
   fromStage: number
   toStage: number
   progress: number
-  type: "web" | "reddit"
+  type: "web"
 }
 
 export function EnhancedProgressTracker({
@@ -180,34 +179,6 @@ export function EnhancedProgressTracker({
               </Badge>
             )}
           </motion.div>
-          <motion.div
-            initial={{ width: 0 }}
-            animate={{ width: "100%" }}
-            transition={{ delay: 0.1 }}
-            className="flex items-center gap-2 text-xs"
-          >
-            <MessageCircle className="h-3 w-3 text-orange-500" />
-            <span className="text-orange-600 dark:text-orange-400">Reddit Posts</span>
-            {progressData.reddit_posts !== undefined && (
-              <Badge variant="secondary" className="ml-auto animate-pulse">
-                {progressData.reddit_posts}
-              </Badge>
-            )}
-          </motion.div>
-          <motion.div
-            initial={{ width: 0 }}
-            animate={{ width: "100%" }}
-            transition={{ delay: 0.2 }}
-            className="flex items-center gap-2 text-xs"
-          >
-            <MessageSquare className="h-3 w-3 text-purple-500" />
-            <span className="text-purple-600 dark:text-purple-400">Reddit Comments</span>
-            {progressData.reddit_comments !== undefined && (
-              <Badge variant="secondary" className="ml-auto animate-pulse">
-                {progressData.reddit_comments}
-              </Badge>
-            )}
-          </motion.div>
         </div>
       )
     }
@@ -225,20 +196,6 @@ export function EnhancedProgressTracker({
             {progressData.web_summaries !== undefined && (
               <Badge variant="secondary" className="ml-auto animate-pulse">
                 {progressData.web_summaries}
-              </Badge>
-            )}
-          </motion.div>
-          <motion.div
-            initial={{ width: 0 }}
-            animate={{ width: "100%" }}
-            transition={{ delay: 0.1 }}
-            className="flex items-center gap-2 text-xs"
-          >
-            <MessageCircle className="h-3 w-3 text-cyan-500" />
-            <span className="text-cyan-600 dark:text-cyan-400">Reddit Summaries</span>
-            {progressData.reddit_summaries !== undefined && (
-              <Badge variant="secondary" className="ml-auto animate-pulse">
-                {progressData.reddit_summaries}
               </Badge>
             )}
           </motion.div>
@@ -298,7 +255,7 @@ export function EnhancedProgressTracker({
         fromStage: currentIndex - 1,
         toStage: currentIndex,
         progress: 0,
-        type: i % 2 === 0 ? "web" : "reddit",
+        type: "web",
       })
     }
 
@@ -398,7 +355,7 @@ export function EnhancedProgressTracker({
                     cx={`${x}%`}
                     cy="50%"
                     r="4"
-                    fill={particle.type === "web" ? "#3b82f6" : "#f97316"}
+                    fill="#3b82f6"
                     initial={{ opacity: 0 }}
                     animate={{ opacity: [0, 1, 1, 0] }}
                     transition={{ duration: 2 }}
@@ -571,7 +528,7 @@ export function EnhancedProgressTracker({
                         variant="secondary"
                         className="mt-1 text-xs"
                       >
-                        {source.type === "web" ? "Web" : "Reddit"}
+                        Web
                       </Badge>
                     </div>
                   </motion.a>

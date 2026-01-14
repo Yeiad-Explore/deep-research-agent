@@ -31,7 +31,7 @@ const stages: Stage[] = [
   },
   {
     id: "searching",
-    label: "Searching Web & Reddit",
+    label: "Searching Web",
     icon: <Search className="h-6 w-6" />,
     nodeName: "multi_source_searcher",
   },

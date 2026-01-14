@@ -18,7 +18,6 @@ interface Discovery {
 
 interface ProgressData {
   web_results?: number
-  reddit_posts?: number
   scraped_content?: number
 }
 
@@ -94,15 +93,6 @@ export default function Home() {
                 id: Date.now().toString(),
                 type: "Web",
                 content: `Found ${update.data.web_results} web results`,
-                timestamp: new Date(),
-              })
-              setDiscoveries([...newDiscoveries])
-            }
-            if (update.data.reddit_posts && update.data.reddit_posts > 0) {
-              newDiscoveries.push({
-                id: Date.now().toString(),
-                type: "Reddit",
-                content: `Found ${update.data.reddit_posts} Reddit posts`,
                 timestamp: new Date(),
               })
               setDiscoveries([...newDiscoveries])
@@ -204,7 +194,7 @@ export default function Home() {
             Deep Research Agent
           </h1>
           <p className="text-muted-foreground text-lg">
-            AI-Powered Deep Research with Web & Reddit Community Insights
+            AI-Powered Deep Web Research Agent
           </p>
         </motion.div>
 
@@ -284,7 +274,7 @@ export default function Home() {
           transition={{ delay: 0.5 }}
           className="mt-12 text-center text-muted-foreground text-sm"
         >
-          <p>Powered by LangGraph, Tavily AI, YARS, and Azure OpenAI</p>
+          <p>Powered by LangGraph, Tavily AI, and Azure OpenAI</p>
         </motion.footer>
       </div>
     </main>

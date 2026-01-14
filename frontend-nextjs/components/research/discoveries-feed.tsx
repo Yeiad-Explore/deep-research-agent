@@ -21,8 +21,6 @@ export function DiscoveriesFeed({ discoveries }: DiscoveriesFeedProps) {
     switch (type.toLowerCase()) {
       case "web":
         return "bg-blue-600"
-      case "reddit":
-        return "bg-orange-600"
       case "system":
         return "bg-purple-600"
       case "progress":

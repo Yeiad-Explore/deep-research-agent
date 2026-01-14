@@ -21,10 +21,7 @@ export function ConfigPanel({ onStartResearch, isResearching }: ConfigPanelProps
   const [showAdvanced, setShowAdvanced] = useState(false)
   const [config, setConfig] = useState<ResearchConfig>({
     depth: "standard",
-    include_reddit: true,
-    time_filter: "month",
     max_web_results: 15,
-    max_reddit_posts: 50,
   })
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -54,7 +51,7 @@ export function ConfigPanel({ onStartResearch, isResearching }: ConfigPanelProps
             Deep Research Agent
           </CardTitle>
           <CardDescription className="text-white/90">
-            AI-Powered Research with Web & Reddit Community Insights
+            AI-Powered Deep Web Research Agent
           </CardDescription>
         </CardHeader>
         <CardContent className="pt-6">
@@ -125,57 +122,19 @@ export function ConfigPanel({ onStartResearch, isResearching }: ConfigPanelProps
                       </Select>
                     </div>
 
-                    <div className="flex items-center space-x-2">
-                      <Checkbox
-                        id="include-reddit"
-                        checked={config.include_reddit}
-                        onCheckedChange={(checked) =>
-                          setConfig({ ...config, include_reddit: checked as boolean })
+                    <div className="space-y-2">
+                      <Label htmlFor="max-web-results">Max Web Results</Label>
+                      <Input
+                        id="max-web-results"
+                        type="number"
+                        min="1"
+                        max="50"
+                        value={config.max_web_results || 15}
+                        onChange={(e) =>
+                          setConfig({ ...config, max_web_results: parseInt(e.target.value) || 15 })
                         }
                       />
-                      <Label htmlFor="include-reddit" className="cursor-pointer">
-                        Include Reddit Discussions
-                      </Label>
                     </div>
-
-                    {config.include_reddit && (
-                      <>
-                        <div className="space-y-2">
-                          <Label htmlFor="subreddits">Specific Subreddits (optional)</Label>
-                          <Input
-                            id="subreddits"
-                            placeholder="e.g., python,programming,learnpython"
-                            onChange={(e) => {
-                              const subreddits = e.target.value
-                                ? e.target.value.split(",").map((s) => s.trim())
-                                : null
-                              setConfig({ ...config, subreddits })
-                            }}
-                          />
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label htmlFor="time-filter">Reddit Time Filter</Label>
-                          <Select
-                            value={config.time_filter}
-                            onValueChange={(value) =>
-                              setConfig({ ...config, time_filter: value })
-                            }
-                          >
-                            <SelectTrigger id="time-filter">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="day">Past 24 Hours</SelectItem>
-                              <SelectItem value="week">Past Week</SelectItem>
-                              <SelectItem value="month">Past Month</SelectItem>
-                              <SelectItem value="year">Past Year</SelectItem>
-                              <SelectItem value="all">All Time</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </>
-                    )}
                   </motion.div>
                 )}
               </AnimatePresence>

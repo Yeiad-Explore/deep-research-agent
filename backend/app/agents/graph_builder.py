@@ -9,7 +9,6 @@ from app.agents.nodes import ResearchNodes
 from app.agents.tools import ResearchTools
 from app.llm.tavily_client import TavilySearchClient
 from app.llm.azure_client import AzureOpenAIClient
-from app.scrapers.yars_client import YARSRedditClient
 from app.scrapers.web_scraper import WebScraper
 from app.config import settings
 
@@ -61,11 +60,6 @@ def build_research_graph():
         deployment_name=settings.azure_openai_deployment_name
     )
 
-    yars_client = YARSRedditClient(
-        user_agent="DeepResearchAgent/1.0",
-        request_delay=settings.reddit_request_delay
-    )
-
     web_scraper = WebScraper(
         timeout=settings.scrape_timeout,
         max_content_length=settings.max_content_length
@@ -74,7 +68,6 @@ def build_research_graph():
     # Initialize tools
     tools = ResearchTools(
         tavily_client=tavily_client,
-        yars_client=yars_client,
         azure_client=azure_client,
         web_scraper=web_scraper
     )
@@ -151,12 +144,9 @@ async def run_research(query: str, config: dict = None) -> dict:
         "research_complete": False,
         "errors": [],
         "web_results": [],
-        "reddit_posts": [],
-        "reddit_comments": [],
         "scraped_web_content": [],
         "sources": [],
         "search_keywords": [],
-        "relevant_subreddits": [],
         "all_content": "",
         "final_response": ""
     }
@@ -197,12 +187,9 @@ async def stream_research(query: str, config: dict = None):
         "research_complete": False,
         "errors": [],
         "web_results": [],
-        "reddit_posts": [],
-        "reddit_comments": [],
         "scraped_web_content": [],
         "sources": [],
         "search_keywords": [],
-        "relevant_subreddits": [],
         "all_content": "",
         "final_response": ""
     }
